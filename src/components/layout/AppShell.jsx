@@ -1,5 +1,6 @@
 import React from 'react'
-import { Home, Dumbbell, TrendingUp, Brain, User, Menu } from 'lucide-react'
+import { Home, Dumbbell, TrendingUp, Brain, User, Menu, LogOut } from 'lucide-react'
+import { useAuth } from '../../contexts/AuthContext'
 
 const navigation = [
   { id: 'dashboard', label: 'Dashboard', icon: Home },
@@ -10,6 +11,7 @@ const navigation = [
 ]
 
 export default function AppShell({ children, currentPage, setCurrentPage }) {
+  const { signOut, userProfile } = useAuth()
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -38,6 +40,16 @@ export default function AppShell({ children, currentPage, setCurrentPage }) {
                   </button>
                 )
               })}
+              <div className="ml-4 pl-4 border-l border-gray-200">
+                <button
+                  onClick={signOut}
+                  className="flex items-center space-x-2 px-3 py-2 text-muted hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                  title="Sign Out"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span className="text-sm font-medium">Sign Out</span>
+                </button>
+              </div>
             </div>
             <button className="md:hidden p-2">
               <Menu className="h-6 w-6 text-text" />

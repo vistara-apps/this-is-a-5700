@@ -2,47 +2,55 @@ import React, { useState } from 'react'
 import { useFitness } from '../../contexts/FitnessContext'
 import { Plus, Play, Square, Timer } from 'lucide-react'
 
-const commonExercises = [
-  'Bench Press', 'Squats', 'Deadlifts', 'Overhead Press', 'Barbell Rows',
-  'Pull-ups', 'Dips', 'Bicep Curls', 'Tricep Extensions', 'Leg Press'
-]
-
 export default function WorkoutLogger() {
-  const { state, dispatch } = useFitness()
-  const { currentWorkout } = state
+  const { 
+    currentWorkout, 
+    exerciseLibrary, 
+    loading, 
+    startWorkout, 
+    finishWorkout, 
+    addExercise: addExerciseToWorkout 
+  } = useFitness()
+  
   const [selectedExercise, setSelectedExercise] = useState('')
   const [sets, setSets] = useState('')
   const [reps, setReps] = useState('')
   const [weight, setWeight] = useState('')
 
-  const startWorkout = () => {
-    dispatch({ type: 'START_WORKOUT' })
+  const handleStartWorkout = async () => {
+    const result = await startWorkout()
+    if (!result.success) {
+      console.error('Failed to start workout:', result.error)
+    }
   }
 
-  const finishWorkout = () => {
-    dispatch({ type: 'FINISH_WORKOUT' })
+  const handleFinishWorkout = async () => {
+    const result = await finishWorkout()
+    if (!result.success) {
+      console.error('Failed to finish workout:', result.error)
+    }
   }
 
-  const addExercise = () => {
+  const handleAddExercise = async () => {
     if (!selectedExercise || !sets || !reps || !weight) return
 
     const exercise = {
-      exerciseId: Date.now().toString(),
-      exerciseName: selectedExercise,
+      exercise_name: selectedExercise,
       sets: parseInt(sets),
       reps: Array(parseInt(sets)).fill(parseInt(reps)),
       weight: Array(parseInt(sets)).fill(parseFloat(weight)),
-      restTime: 120,
-      createdAt: new Date().toISOString()
+      rest_time: 120
     }
 
-    dispatch({ type: 'ADD_EXERCISE', payload: exercise })
+    const result = await addExerciseToWorkout(exercise)
     
-    // Reset form
-    setSelectedExercise('')
-    setSets('')
-    setReps('')
-    setWeight('')
+    if (result.success) {
+      // Reset form
+      setSelectedExercise('')
+      setSets('')
+      setReps('')
+      setWeight('')
+    }
   }
 
   const formatDuration = (startTime) => {
@@ -61,11 +69,16 @@ export default function WorkoutLogger() {
             <h3 className="text-lg font-medium text-text mb-2">Ready to start your workout?</h3>
             <p className="text-muted mb-6">Track your exercises in real-time and get AI insights.</p>
             <button 
-              onClick={startWorkout}
+              onClick={handleStartWorkout}
+              disabled={loading}
               className="btn-primary inline-flex items-center space-x-2"
             >
-              <Play className="h-4 w-4" />
-              <span>Start Workout</span>
+              {loading ? (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Play className="h-4 w-4" />
+              )}
+              <span>{loading ? 'Starting...' : 'Start Workout'}</span>
             </button>
           </div>
         ) : (
@@ -75,15 +88,20 @@ export default function WorkoutLogger() {
               <div>
                 <h3 className="font-medium text-text">Workout in Progress</h3>
                 <p className="text-sm text-muted">
-                  Duration: {formatDuration(currentWorkout.startTime)}
+                  Duration: {formatDuration(currentWorkout.start_time)}
                 </p>
               </div>
               <button 
-                onClick={finishWorkout}
+                onClick={handleFinishWorkout}
+                disabled={loading}
                 className="btn-secondary inline-flex items-center space-x-2"
               >
-                <Square className="h-4 w-4" />
-                <span>Finish</span>
+                {loading ? (
+                  <div className="w-4 h-4 border-2 border-gray-600 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Square className="h-4 w-4" />
+                )}
+                <span>{loading ? 'Finishing...' : 'Finish'}</span>
               </button>
             </div>
 
@@ -99,8 +117,8 @@ export default function WorkoutLogger() {
                     className="input w-full"
                   >
                     <option value="">Select exercise...</option>
-                    {commonExercises.map((exercise) => (
-                      <option key={exercise} value={exercise}>{exercise}</option>
+                    {exerciseLibrary.map((exercise) => (
+                      <option key={exercise.id} value={exercise.name}>{exercise.name}</option>
                     ))}
                   </select>
                 </div>
@@ -136,12 +154,16 @@ export default function WorkoutLogger() {
                 </div>
               </div>
               <button 
-                onClick={addExercise}
+                onClick={handleAddExercise}
                 className="btn-primary mt-4 inline-flex items-center space-x-2"
-                disabled={!selectedExercise || !sets || !reps || !weight}
+                disabled={!selectedExercise || !sets || !reps || !weight || loading}
               >
-                <Plus className="h-4 w-4" />
-                <span>Add Exercise</span>
+                {loading ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Plus className="h-4 w-4" />
+                )}
+                <span>{loading ? 'Adding...' : 'Add Exercise'}</span>
               </button>
             </div>
 
@@ -153,7 +175,7 @@ export default function WorkoutLogger() {
                   {currentWorkout.exercises.map((exercise, index) => (
                     <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
                       <div>
-                        <h5 className="font-medium text-text">{exercise.exerciseName}</h5>
+                        <h5 className="font-medium text-text">{exercise.exercise_name}</h5>
                         <p className="text-sm text-muted">
                           {exercise.sets} sets × {exercise.reps[0]} reps @ {exercise.weight[0]} lbs
                         </p>
